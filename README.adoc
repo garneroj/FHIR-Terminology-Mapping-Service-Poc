@@ -1,4 +1,5 @@
 = FHIR Terminology Mapping Service (POC)
+:icons: font
 :toc: macro
 :toc-title: Table of Contents
 :source-highlighter: highlight.js
@@ -10,15 +11,106 @@ image:https://img.shields.io/badge/Docker-Postgres-blue[Docker]
 
 A **Proof of Concept (POC)** for a Clinical Terminology Server designed to map proprietary legacy codes to LOINC standards using the **HL7 FHIR** `$translate` operation.
 
-This project leverages the **HAPI FHIR JPA Starter** to provide a robust, standard-compliant server backed by **PostgreSQL**.
+This project leverages the **HAPI FHIR JPA Starter** to provide a robust, standard-compliant server backed by a **Postgres** relational database.
 
 toc::[]
 
 == Introduction
 
-This repository contains a functional implementation of a Terminology Server capable of ingesting CodeSystems and ConceptMaps to perform runtime translations. It is designed to be easily deployed using Docker containers for the persistence layer.
+This repository contains a functional implementation of a Terminology Server capable of defining a LOINC and a legacy proprietary CodeSystems, and ConceptMaps to perform runtime translations.
 
-// A partir de aquí irás agregando tus pasos:
-// == Prerequisites
-// == Database Setup
-// etc.
+It is designed to be easily deployed using Docker containers for the persistence layer.
+
+== Tools
+* Java 17.
+* Maven 3.9.9.
+* Docker 27.4.0.
+
+== Cloning our Term Mapping Server
+
+Open a terminal, and in a directory of your choice, please execute 
+
+[source,script]
+-----------------
+git clone https://github.com/garneroj/FHIR-Terminology-Mapping-Service-Poc.git
+-----------------
+
+You should see something like
+
+[source,script]
+-----------------
+$ git clone https://github.com/garneroj/FHIR-Terminology-Mapping-Service-Poc.git
+Cloning into 'FHIR-Terminology-Mapping-Service-Poc'...
+...
+$ ls -ltra
+total 0
+drwxr-x---+ 68 jorgegarnero  staff  2176 Dec 30 16:47 ..
+drwxr-xr-x   3 jorgegarnero  staff    96 Dec 30 16:47 .
+drwxr-xr-x  21 jorgegarnero  staff   672 Dec 30 16:47 FHIR-Terminology-Mapping-Service-Poc
+$ 
+$ cd FHIR-Terminology-Mapping-Service-Poc 
+$ ls
+AGENTS.md		catalina.properties	custom			Dockerfile		pom.xml			src
+build-docker-image.bat	charts			docker-build.bat	LICENSE			README.adoc		term-server-config
+build-docker-image.sh	configs			docker-compose.yml	NOTICE			server.xml
+-----------------
+
+**README.adoc** is this same document.
+
+Once you have it, please execute
+
+[source,script]
+-----------------
+mvn clean package
+-----------------
+
+You should see something like:
+
+[source,script]
+-----------------
+$ mvn clean package
+[INFO] Scanning for projects...
+[WARNING] 
+...
+[WARNING] The project ca.uhn.hapi.fhir:hapi-fhir-jpaserver-starter...
+[INFO] 
+[INFO] ------------< ca.uhn.hapi.fhir:hapi-fhir-jpaserver-starter >------------
+[INFO] Building HAPI FHIR JPA Server ...
+...
+[INFO] 
+[INFO] --- spring-boot:3.4.11:repackage (default) @ hapi-fhir-jpaserver-starter ---
+[INFO] ...
+[INFO] ...
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.080 s
+[INFO] Finished at: 2025-12-30T17:13:18-05:00
+[INFO] ------------------------------------------------------------------------
+-----------------
+
+NOTE: This terminology server is based on the https://github.com/hapifhir/hapi-fhir-jpaserver-starter[HAPI FHIR JPA Server Starter]. We will analyze our changes, starting with...
+
+== Database Credential Configuration
+
+The application is pre-configured to use **PostgreSQL** as the persistence layer (replacing the default H2 database).
+The configuration settings are located in `src/main/resources/application.yaml`.
+
+We will ensure (in next instructions) your database matches the following credentials defined in the `datasource` section:
+
+[source,yaml]
+----
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: terminologypostgresuser
+    password: Pass123
+    driverClassName: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+----
+
+IMPORTANT: If you wish to change the password or username, you must update this file. Hardcoded in this POC, to keep things simple. But do not hardcode if you proceed further.  
+
