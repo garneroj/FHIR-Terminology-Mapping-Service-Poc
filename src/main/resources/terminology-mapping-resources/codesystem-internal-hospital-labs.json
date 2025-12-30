@@ -1,0 +1,19 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "hospital-lab-codes",
+  "url": "http://my-hospital.com/internal-lab-codes",
+  "name": "HospitalInternalCodes",
+  "title": "Internal Laboratory Codes",
+  "status": "active",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "HOSP-123",
+      "display": "Group and Screen Test (Internal)"
+    },
+    {
+      "code": "HOSP-456",
+      "display": "Hemoglobin A1c (Internal)"
+    }
+  ]
+}

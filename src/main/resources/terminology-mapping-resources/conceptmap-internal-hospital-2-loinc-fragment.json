@@ -1,0 +1,39 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "map-internal-hospital-2-loinc-fragment",
+  "url": "http://my-hospital.com/fhir/ConceptMap/internal-hospital-2-loinc-fragment",
+  "name": "InternalHospital2LoincFragment",
+  "title": "Mapping Internal Hospital Codes to LOINC fragment",
+  "status": "active",
+  "sourceUri": "http://my-hospital.com/internal-lab-codes",
+  "targetUri": "http://loinc.org",
+  "group": [
+    {
+      "source": "http://my-hospital.com/internal-lab-codes",
+      "target": "http://loinc.org",
+      "element": [
+        {
+          "code": "HOSP-123",
+          "display": "Group and Screen Test (Internal)",
+          "target": [
+            {
+              "code": "883-9",
+              "display": "ABO and Rh group [Type] in Blood",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "HOSP-456",
+          "display": "Hemoglobin A1c (Internal)",
+          "target": [
+            {
+              "code": "4548-4",
+              "equivalence": "equivalent"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

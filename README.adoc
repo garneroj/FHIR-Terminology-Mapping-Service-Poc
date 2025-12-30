@@ -1,0 +1,24 @@
+= FHIR Terminology Mapping Service (POC)
+:toc: macro
+:toc-title: Table of Contents
+:source-highlighter: highlight.js
+
+image:https://img.shields.io/badge/Java-17-orange[Java]
+image:https://img.shields.io/badge/FHIR-R4-firebrick[FHIR]
+image:https://img.shields.io/badge/Spring%20Boot-3.x-green[Spring Boot]
+image:https://img.shields.io/badge/Docker-Postgres-blue[Docker]
+
+A **Proof of Concept (POC)** for a Clinical Terminology Server designed to map proprietary legacy codes to LOINC standards using the **HL7 FHIR** `$translate` operation.
+
+This project leverages the **HAPI FHIR JPA Starter** to provide a robust, standard-compliant server backed by **PostgreSQL**.
+
+toc::[]
+
+== Introduction
+
+This repository contains a functional implementation of a Terminology Server capable of ingesting CodeSystems and ConceptMaps to perform runtime translations. It is designed to be easily deployed using Docker containers for the persistence layer.
+
+// A partir de aquí irás agregando tus pasos:
+// == Prerequisites
+// == Database Setup
+// etc.

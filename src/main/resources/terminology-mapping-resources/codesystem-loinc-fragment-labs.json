@@ -1,0 +1,19 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "loinc-fragment",
+  "url": "http://loinc.org",
+  "name": "LOINC",
+  "title": "LOINC Code System (Fragment)",
+  "status": "active",
+  "content": "fragment",
+  "concept": [
+    {
+      "code": "883-9",
+      "display": "ABO and Rh group [Type] in Blood"
+    },
+    {
+      "code": "4548-4",
+      "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+    }
+  ]
+}
