@@ -1,0 +1,483 @@
+= FHIR Terminology Mapping Service (POC)
+:icons: font
+:toc: macro
+:toc-title: Table of Contents
+:source-highlighter: highlight.js
+
+image:https://img.shields.io/badge/Java-17-orange[Java]
+image:https://img.shields.io/badge/FHIR-R4-firebrick[FHIR]
+image:https://img.shields.io/badge/Spring%20Boot-3.x-green[Spring Boot]
+image:https://img.shields.io/badge/Docker-Postgres-blue[Docker]
+
+A **Proof of Concept (POC)** for a Clinical Terminology Server designed to map proprietary legacy codes to LOINC standards using the **HL7 FHIR** `$translate` operation.
+
+This project leverages the **HAPI FHIR JPA Starter** to provide a robust, standard-compliant server backed by a **Postgres** relational database.
+
+toc::[]
+
+== Introduction
+
+This repository contains a functional implementation of a Terminology Server capable of defining a LOINC code system, a legacy proprietary code system, and a ConceptMap to perform runtime translations.
+
+It is designed to be easily deployed using Docker containers for the persistence layer.
+
+We use these tools:
+
+* Java 17.
+* Maven 3.9.9.
+* Docker 27.4.0.
+
+== The Goal
+
+We want to have a terminology mapping service, able to translate hypothetical legacy codes
+
+to the LOINC system.
+
+So, let's imagine you have the following legacy codes 
+
+[cols="1,3", options="header"]
+|===
+| Code | Description
+
+| HOSP-123
+| Group and Screen Test
+
+| HOSP-456
+| Hemoglobin A1c
+|===
+
+Now we want to have a rest service, that will translate these legacy codes, into LOINC codes, like
+
+[options="header"]
+|===
+| Legacy | LOINC | Description
+
+| HOSP-123
+| 883-9
+| ABO and Rh group [Type] in Blood
+
+| HOSP-456
+| 4548-4
+| Hemoglobin A1c/Hemoglobin.total in Blood
+|===
+
+using the hapi fhir *$translate* operation.
+
+For this POC, translating two codes will suffice.
+
+== Cloning our Term Mapping Server
+
+Open a terminal, and in a directory of your choice, please execute
+
+[source,script]
+-----------------
+git clone https://github.com/garneroj/FHIR-Terminology-Mapping-Service-Poc.git
+-----------------
+
+You should see something like
+
+[source,script]
+-----------------
+$ git clone https://github.com/garneroj/FHIR-Terminology-Mapping-Service-Poc.git
+Cloning into 'FHIR-Terminology-Mapping-Service-Poc'...
+...
+$ ls -ltra
+total 0
+drwxr-x---+ 68 jorgegarnero  staff  2176 Dec 30 16:47 ..
+drwxr-xr-x   3 jorgegarnero  staff    96 Dec 30 16:47 .
+drwxr-xr-x  21 jorgegarnero  staff   672 Dec 30 16:47 FHIR-Terminology-Mapping-Service-Poc
+$ 
+$ cd FHIR-Terminology-Mapping-Service-Poc 
+$ ls
+AGENTS.md		catalina.properties	custom			Dockerfile		pom.xml			src
+build-docker-image.bat	charts			docker-build.bat	LICENSE			README.adoc		term-server-config
+build-docker-image.sh	configs			docker-compose.yml	NOTICE			server.xml
+-----------------
+
+**README.adoc** is this same document.
+
+Once you have it, please execute
+
+[source,script]
+-----------------
+mvn clean package
+-----------------
+
+(libraries download may take a while)
+
+You should see something like:
+
+[source,script]
+-----------------
+$ mvn clean package
+[INFO] Scanning for projects...
+[WARNING] 
+...
+[WARNING] The project ca.uhn.hapi.fhir:hapi-fhir-jpaserver-starter...
+[INFO] 
+[INFO] ------------< ca.uhn.hapi.fhir:hapi-fhir-jpaserver-starter >------------
+[INFO] Building HAPI FHIR JPA Server ...
+...
+[INFO] 
+[INFO] --- spring-boot:3.4.11:repackage (default) @ hapi-fhir-jpaserver-starter ---
+[INFO] ...
+[INFO] ...
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.080 s
+[INFO] Finished at: 2025-12-30T17:13:18-05:00
+[INFO] ------------------------------------------------------------------------
+-----------------
+
+NOTE: This terminology server is based on the https://github.com/hapifhir/hapi-fhir-jpaserver-starter[HAPI FHIR JPA Server Starter]. We will analyze the changes this repository has for its purpose. Starting with...
+
+== Database Credential Configuration
+
+The application is pre-configured to use **PostgreSQL** as the persistence layer (replacing the default H2 database).
+The configuration settings are located in `src/main/resources/application.yaml`.
+
+We will ensure (in next instructions) your database matches the following credentials defined in the `datasource` section:
+
+[source,yaml]
+----
+spring:
+  datasource:
+    url: 'jdbc:postgresql://localhost:5432/termdatabase'
+    username: terminologypostgresuser
+    password: Pass123
+    driverClassName: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+----
+
+IMPORTANT: If you wish to change the database name, password, username, port, you must update this file. These values are hardcoded in this POC for simplicity. Do not hardcode credentials in a production environment.
+
+== Creating Postgres database
+
+execute
+[source,script]
+-----------------
+docker pull postgres
+-----------------
+
+This will pull the latest docker image for *postgres*.
+
+NOTE: *Linux* users: 
+If you are running docker commands on *Linux* and have not configured your user to run Docker without privileges (ie., added your user to tke 'docker' group), you may need to prepend '*sudo*' to the docker commands.
+Not applicable on macOS or Windows.
+
+execute
+
+[source,script]
+-----------------
+$ docker run -d --name terminologyContainer -p 5432:5432 -e POSTGRES_PASSWORD=Pass123 -e POSTGRES_USER=terminologypostgresuser postgres
+-----------------
+
+this runs:
+
+* a container called *terminologyContainer* (_--name_)
+* which runs in the *background* (_-d_)
+* image port *5432* will be mapped to port *5432* on your host machine. (_-p_)
+* password will be *Pass123* (_-e_)
+* for user *terminologypostgresuser*  (_-e_)
+* with an image named *postgres*
+
+NOTE: Notice the *user*, *password* and *port* are the same that were indicated in **application.yaml** file.
+
+To verify, execute `docker ps`, and you should find such container.
+
+[source,script]
+-----------------
+$ docker ps
+CONTAINER ID   IMAGE      COMMAND                  CREATED         STATUS         PORTS                    NAMES
+c9e157bc1318   postgres   "docker-entrypoint.s…"   5 seconds ago   Up 5 seconds   0.0.0.0:5432->5432/tcp   terminologyContainer
+-----------------
+
+Our container is up & running.
+
+Let's open a terminal in it, call postgres command line tool (*psql*), and create the database.
+
+[source,script]
+-----------------------------------
+$ docker exec -it terminologyContainer bash
+root@c9e157bc1318:/# psql -h localhost -U terminologypostgresuser
+psql (18.1 (Debian 18.1-1.pgdg13+2))
+Type "help" for help.
+terminologypostgresuser=# CREATE DATABASE termdatabase;
+CREATE DATABASE
+terminologypostgresuser=# \c termdatabase;
+You are now connected to database "termdatabase" as user "terminologypostgresuser".
+termdatabase=# CREATE TABLE termtesttable (ID INT PRIMARY KEY NOT NULL, NAME TEXT NOT NULL);
+CREATE TABLE
+termdatabase=# INSERT INTO termtesttable VALUES (1, 'Mary has a little lamb');
+INSERT 0 1
+termdatabase=# SELECT * FROM termtesttable;
+ id |          name
+----+------------------------
+  1 | Mary has a little lamb
+(1 row)
+-----------------------------------
+
+Ok. We have
+
+* a docker *container* for postgres = `terminologyContainer`
+* with *database*=`termdatabase` 
+* with *user*=`terminologypostgresuser`
+* with *password*=`Pass123`
+* with *table*=`termtesttable`
+* with 1 row=`(1, 'Mary has a little lamb')`
+
+matching the *application.yaml* values too.
+
+== Terminology Server Boot Up
+
+back to your terminal, in the project directory, run
+
+[source,script]
+-----------------
+mvn clean spring-boot:run
+-----------------
+
+you should see something like,
+
+[source,script]
+-----------------
+$ mvn clean spring-boot:run
+[INFO] Scanning for projects...
+[WARNING] 
+...
+[WARNING] Some problems were encountered ... for ca.uhn.hapi.fhir:hapi-fhir-jpaserver-starter...
+...
+[INFO] 
+[INFO] --- spring-boot:3.4.11:run (default-cli) @ hapi-fhir-jpaserver-starter ---
+[INFO] Attaching agents: []
+...
+...
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.4.11)
+
+2025-12-31T13:55:33.632-05:00  INFO 34549 --- [ main] ca.uhn.fhir.jpa.starter.Application      : Starting Application using Java 17.0.13 with PID 34549 (/Users/jorgegarnero/FHIR-Terminology-Mapping-Service-Poc/target/classes started by jorgegarnero in /Users/jorgegarnero/FHIR-Terminology-Mapping-Service-Poc)
+...
+...
+2025-12-31T13:55:44.962-05:00  INFO 34549 --- [ main] org.quartz.core.QuartzScheduler          : Scheduler hapi-fhir-jpa-scheduler_$_NON_CLUSTERED started.
+2025-12-31T13:55:44.962-05:00  INFO 34549 --- [ main] c.uhn.fhir.jpa.sched.BaseHapiScheduler   : Starting scheduler hapi-fhir-jpa-scheduler-clustered
+2025-12-31T13:55:44.962-05:00  INFO 34549 --- [ main] org.quartz.core.QuartzScheduler          : Scheduler hapi-fhir-jpa-scheduler_$_NON_CLUSTERED started.
+2025-12-31T13:55:44.970-05:00  INFO 34549 --- [ main] ca.uhn.fhir.jpa.starter.Application      : Started Application in 11.483 seconds (process running for 11.678)
+
+-----------------
+
+You should see the line indicating *Started Application*, to have the service up & running.
+
+To verify, you can also check its 
+http://localhost:8080/fhir/metadata[CapabilityStatement]
+or swagger 
+http://localhost:8080/fhir/swagger-ui/[Swagger].
+
+== Term Server Config
+
+We need to configure the legacy codes, LOINC codes, and their mappings
+
+[source,script]
+-----------------
+$ ls -l  src/main/resources/terminology-mapping-resources   
+total 24
+-rw-r--r--  1 jorgegarnero  staff   434 Dec 30 16:47 codesystem-internal-hospital-labs.json
+-rw-r--r--  1 jorgegarnero  staff   402 Dec 30 16:47 codesystem-loinc-fragment-labs.json
+-rw-r--r--  1 jorgegarnero  staff  1089 Dec 30 16:47 conceptmap-internal-hospital-2-loinc-fragment.json
+-----------------
+
+[cols="1,2", options="header"]
+|===
+| Filename | Meaning
+
+| codesystem-internal-hospital-labs.json
+| The two legacy codes we want to map.
+
+| codesystem-loinc-fragment-labs.json
+| The two target loinc codes.
+
+| conceptmap-internal-hospital-2-loinc-fragment.json
+| The map.
+
+|===
+
+To do that we will create these code systems and concept map resources.
+
+This script will execute three POST requests to the server. 
+
+[source,script]
+-----------------
+$ ls -l term-server-config 
+total 8
+-rwxr-xr-x  1 jorgegarnero  staff  3013 Dec 30 16:47 term-server-config.sh
+$ cd term-server-config
+-----------------
+ 
+Please run the script (from _term-server-config_ directory). It will skip the load if the resource is already created. 
+
+You should read something like:
+
+[source,script]
+-----------------
+$ ./term-server-config.sh
+==========================================
+ STARTING TERMINOLOGY CONFIGURATION
+==========================================
+Checking server status...
+Server is online!
+------------------------------------------
+Checking CodeSystem: http://my-hospital.com/internal-lab-codes
+   -> Not found. Creating resource from codesystem-internal-hospital-labs.json...
+   -> [OK] Successfully created (HTTP 201).
+------------------------------------------
+Checking CodeSystem: http://loinc.org
+   -> Not found. Creating resource from codesystem-loinc-fragment-labs.json...
+   -> [OK] Successfully created (HTTP 201).
+------------------------------------------
+Checking ConceptMap: http://my-hospital.com/fhir/ConceptMap/internal-hospital-2-loinc-fragment
+   -> Not found. Creating resource from conceptmap-internal-hospital-2-loinc-fragment.json...
+   -> [OK] Successfully created (HTTP 201).
+------------------------------------------
+==========================================
+ CONFIGURATION PROCESS COMPLETED
+==========================================
+-----------------
+
+== Verifying the Translation
+
+Now that the server is up and the mappings are loaded, let's ask the server to translate one of our legacy codes.
+
+We will try to translate **HOSP-123** (which we know is "Group and Screen Test") to see if we get the LOINC code **883-9**.
+
+Execute the following `curl` command:
+
+[source,bash]
+----
+curl -s "http://localhost:8080/fhir/ConceptMap/\$translate?system=http://my-hospital.com/internal-lab-codes&code=HOSP-123&target=http://loinc.org"
+----
+
+You should receive a JSON response similar to this:
+
+[source,json]
+----
+{
+  "resourceType": "Parameters",
+  "parameter": [ {
+    "name": "result",
+    "valueBoolean": true
+  }, {
+    "name": "message",
+    "valueString": "Matches found!"
+  }, {
+    "name": "match",
+    "part": [ {
+      "name": "equivalence",
+      "valueCode": "equivalent"
+    }, {
+      "name": "concept",
+      "valueCoding": {
+        "system": "http://loinc.org",
+        "code": "883-9",
+        "display": "ABO and Rh group [Type] in Blood"
+      }
+    } ]
+  } ]
+}
+----
+
+If you see `"valueCode": "883-9"`, **Congratulations!** Your Terminology Server is successfully translating legacy proprietary data into standard LOINC codes.
+
+== Integration Tests Configuration. Pom changes.
+
+To ensure the system integrity, we have included a suite of integration tests.
+
+The addition of the failsafe plugin makes "verify" a new maven goal for integration tests. 
+
+[xml]
+-----------------------------------------
+ <!--        failsafe plugin added-->
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-failsafe-plugin</artifactId>
+                 <version>3.4.0</version>
+                 <executions>
+                     <execution>
+                         <goals>
+                             <goal>integration-test</goal>
+                             <goal>verify</goal>
+                         </goals>
+                     </execution>
+                 </executions>
+             </plugin>
+-----------------------------------------
+
+The addition of build helper plugin indicates where to run integration tests from
+
+[xml]
+-----------------------
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>add-integration-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/integration-test/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+-----------------------
+
+== Running An Integration Test
+
+Make sure you have the *terminologyContainer* running, and the termserver app started (as shown before). 
+
+Execute:
+
+[source,bash]
+----
+mvn clean verify
+----
+
+You should see the build success:
+
+[source,text]
+----
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+----
+
+The *TerminologyIT* Java class verifies `HOSP-123` is successfully translated to `883-9`.
+
+== Conclusion
+
+By leveraging the **HAPI FHIR JPA Starter**, **PostgreSQL**, and the standard `$translate` operation, we have established a foundational architecture for a **Terminology Service**. 
+
+While this project focuses on a specific subset of Lab codes (LOINC), the pattern is reusable for other domains (Diagnoses/ICD-10, Medications/RxNorm), paving the way for a fully interoperable Clinical Data ecosystem.
+
+Notably, _no functional code_ was written, only tests. The mapping function was implemented by configuring **HAPI FHIR**. 
+
+
