@@ -474,6 +474,9 @@ Under the target/failsafe-reports directory, you can see the test output. You sh
 
 [source,bash]
 ----
+$ cat  target/failsafe-reports/com.myhospital.TerminologyIT-output.txt
+...
+...
 2026-01-08T16:02:45.429-05:00  INFO  --- [ main] ca.uhn.fhir.util.VersionUtil  : HAPI FHIR version 8.6.0 - Rev 66e4809c55
 ...
 ✅ Successful connection: HAPI FHIR Server
