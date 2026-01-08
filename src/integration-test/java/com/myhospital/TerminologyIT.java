@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TerminologyIT {
 
     private static final String SERVER_URL = "http://localhost:8080/fhir";
+    private static final String ORIGINAL_LEGACY_CODE = "HOSP-123";
     private static final String EXPECTED_LOINC_CODE = "883-9";
 
     @Test
@@ -39,14 +40,13 @@ public class TerminologyIT {
         //--- GET for translation
         //--- http://localhost:8080/fhir/ConceptMap/$translate?system=http://my-hospital.com/internal-lab-codes&code=HOSP-123&target=http://loinc.org
         System.out.println("🔄 Running...");
-        Parameters response = null;
-        try {
+        Parameters response = null; try {
              response = client
                 .operation      ()
                 .onType         (org.hl7.fhir.r4.model.ConceptMap.class)
                 .named          ("$translate")
                 .withParameter  (Parameters.class, "system", new StringType("http://my-hospital.com/internal-lab-codes"))
-                .andParameter   ("code", new StringType("HOSP-123"))
+                .andParameter   ("code", new StringType(ORIGINAL_LEGACY_CODE))
                 .andParameter   ("target", new StringType("http://loinc.org"))
 
                 .useHttpGet         ()
@@ -81,6 +81,7 @@ public class TerminologyIT {
                 .orElse("");
 
 
+        System.out.println("   Original: " + ORIGINAL_LEGACY_CODE) ;
         System.out.println("   Expected: " + EXPECTED_LOINC_CODE);
         System.out.println("   Actual: " + actualCode);
 
