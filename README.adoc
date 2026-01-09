@@ -25,9 +25,9 @@ It is designed to be easily deployed using Docker containers for the persistence
 
 We use these tools:
 
-* Java 17.
-* Maven 3.9.9.
-* Docker 27.4.0.
+* Java 17 (LTS) or later.
+* Maven 3.9.9+.
+* Docker (recent version).
 
 == The Goal
 
@@ -449,7 +449,7 @@ The addition of build helper plugin indicates where to run integration tests fro
 
 Make sure you have the *terminologyContainer* running, and the termserver app started (as shown before). 
 
-Execute:
+From a terminal in the project root directory, execute:
 
 [source,bash]
 ----
@@ -487,6 +487,8 @@ $ cat  target/failsafe-reports/com.myhospital.TerminologyIT-output.txt
 ----
 
 The *TerminologyIT* Java class verifies `HOSP-123` is successfully translated to `883-9`.
+
+You can easily extend this test to check legacy code `HOSP-456` is successfully translated to `4548-4`.
 
 == Conclusion
 
