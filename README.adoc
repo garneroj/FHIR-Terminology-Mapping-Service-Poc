@@ -168,7 +168,7 @@ docker pull postgres
 This will pull the latest docker image for *postgres*.
 
 NOTE: *Linux* users: 
-If you are running docker commands on *Linux* and have not configured your user to run Docker without privileges (ie., added your user to tke 'docker' group), you may need to prepend '*sudo*' to the docker commands.
+If you are running docker commands on *Linux* and have not configured your user to run Docker without privileges (ie., added your user to the 'docker' group), you may need to prepend '*sudo*' to the docker commands.
 Not applicable on macOS or Windows.
 
 execute
