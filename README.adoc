@@ -9,9 +9,11 @@ image:https://img.shields.io/badge/FHIR-R4-firebrick[FHIR]
 image:https://img.shields.io/badge/Spring%20Boot-3.x-green[Spring Boot]
 image:https://img.shields.io/badge/Docker-Postgres-blue[Docker]
 
-A **Proof of Concept (POC)** for a Clinical Terminology Server designed to map proprietary legacy codes to LOINC standards using the **HL7 FHIR** `$translate` operation.
+A **Proof of Concept (POC)** for a Clinical Terminology Rest Server designed to map proprietary legacy codes to LOINC standards using the **HL7 FHIR** `$translate` operation.
 
-This project leverages the **HAPI FHIR JPA Starter** to provide a robust, standard-compliant server backed by a **Postgres** relational database.
+This project leverages the 
+https://github.com/hapifhir/hapi-fhir-jpaserver-starter[HAPI FHIR JPA Server Starter]
+project to provide a robust, standard-compliant server backed by a **Postgres** relational database.
 
 toc::[]
 
@@ -210,15 +212,14 @@ terminologypostgresuser=# CREATE DATABASE termdatabase;
 CREATE DATABASE
 terminologypostgresuser=# \c termdatabase;
 You are now connected to database "termdatabase" as user "terminologypostgresuser".
-termdatabase=# CREATE TABLE termtesttable (ID INT PRIMARY KEY NOT NULL, NAME TEXT NOT NULL);
-CREATE TABLE
-termdatabase=# INSERT INTO termtesttable VALUES (1, 'Mary has a little lamb');
-INSERT 0 1
-termdatabase=# SELECT * FROM termtesttable;
- id |          name
-----+------------------------
-  1 | Mary has a little lamb
-(1 row)
+termdatabase=#
+\q
+root@ad79e2955ab3:/# 
+exit
+
+What's next:
+...
+$
 -----------------------------------
 
 Ok. We have
@@ -227,8 +228,6 @@ Ok. We have
 * with *database*=`termdatabase` 
 * with *user*=`terminologypostgresuser`
 * with *password*=`Pass123`
-* with *table*=`termtesttable`
-* with 1 row=`(1, 'Mary has a little lamb')`
 
 matching the *application.yaml* values too.
 
